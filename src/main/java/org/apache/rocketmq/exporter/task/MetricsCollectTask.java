@@ -91,6 +91,7 @@ public class MetricsCollectTask {
     private static String clusterName = null;
     private final static Logger log = LoggerFactory.getLogger(MetricsCollectTask.class);
 
+    private ClusterInfo clusterInfo;
     private BlockingQueue<Runnable> collectClientTaskBlockQueue;
 
     @Bean(name = "collectClientMetricExecutor")
@@ -120,7 +121,7 @@ public class MetricsCollectTask {
     public void init() throws InterruptedException, RemotingConnectException, RemotingTimeoutException, RemotingSendRequestException, MQBrokerException {
         log.info("MetricsCollectTask init starting....");
         long start = System.currentTimeMillis();
-        ClusterInfo clusterInfo = mqAdminExt.examineBrokerClusterInfo();
+        clusterInfo = mqAdminExt.examineBrokerClusterInfo();
         StringBuilder infoOut = new StringBuilder();
         for (String clusterName : clusterInfo.getClusterAddrTable().keySet()) {
             infoOut.append(String.format("cluster name= %s, broker name = %s%n", clusterName, clusterInfo.getClusterAddrTable().get(clusterName)));
@@ -195,7 +196,7 @@ public class MetricsCollectTask {
             }
             Set<Map.Entry<String, Long>> brokerOffsetEntries = brokerOffsetMap.entrySet();
             for (Map.Entry<String, Long> brokerOffsetEntry : brokerOffsetEntries) {
-                metricsService.getCollector().addTopicOffsetMetric(clusterName, brokerOffsetEntry.getKey(), topic,
+                metricsService.getCollector().addTopicOffsetMetric(this.clusterInfo.getBrokerAddrTable().get(brokerOffsetEntry.getKey()).getCluster(), brokerOffsetEntry.getKey(), topic,
                     brokerUpdateTimestampMap.get(brokerOffsetEntry.getKey()), brokerOffsetEntry.getValue());
             }
         }
@@ -319,7 +320,7 @@ public class MetricsCollectTask {
                         }
                     }
                     for (Map.Entry<String, Long> consumeOffsetEntry : consumeOffsetMap.entrySet()) {
-                        metricsService.getCollector().addGroupBrokerTotalOffsetMetric(clusterName,
+                        metricsService.getCollector().addGroupBrokerTotalOffsetMetric(clusterInfo.getBrokerAddrTable().get(consumeOffsetEntry.getKey()).getCluster(),
                             consumeOffsetEntry.getKey(), topic, group, consumeOffsetEntry.getValue());
                     }
                 } catch (Exception ex) {
@@ -352,7 +353,7 @@ public class MetricsCollectTask {
                         }
                     }
                     for (Map.Entry<String, Long> consumeLatencyEntry : consumerLatencyMap.entrySet()) {
-                        metricsService.getCollector().addGroupGetLatencyByStoreTimeMetric(clusterName,
+                        metricsService.getCollector().addGroupGetLatencyByStoreTimeMetric(clusterInfo.getBrokerAddrTable().get(consumeLatencyEntry.getKey()).getCluster(),
                             consumeLatencyEntry.getKey(), topic, group, consumeLatencyEntry.getValue());
                     }
 
